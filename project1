@@ -1,0 +1,71 @@
+#include<SoftwareSerial.h> //블루투스 통신 라이브러리 추가
+#include<Servo.h> //모터 라이브러리 추가
+
+#define SERVO 5 //모터 핀번호
+#define RXD 2   //블루투스 RX 핀번호
+#define TXD 3   //블루투스 TX 핀번호
+int cds = A0;   //조도센서 핀번호
+
+SoftwareSerial BTSerial(TXD, RXD); //블루투스 통신 선언
+Servo servo; //조도센서 선언
+
+int angle = 60; //모터 회전 각
+int window = 0; //창문 여는 값
+
+void setup() {
+  Serial.begin(9600);
+  BTSerial.begin(9600);
+  servo.attach(SERVO);
+  
+}
+
+void loop() {
+/*int cdsValue = analogRead(cds); //조도센서 값 cdsValue에 저장
+Serial.println(cdsValue);*/ 
+  BTSerial.available(); //블루투스에 데이터가 들어오면
+  char cData = BTSerial.read(); //블루투스 데이터를 읽어서 cData에 저장함
+
+  if('1' == cData){ //블루투스에 데이터가 1이 들어오면 수동으로
+    BTSerial.println("창문이 열렸습니다."); //블루투스 모니터 
+    window = angle; //모터 값을 60 증가 시켜서
+    servo.write(window); //창문을 열게 함
+    delay(1000);
+  }
+  if('2' == cData){ //블루투스에 데이터가 2가 들어오면 수동으로
+    BTSerial.println("창문이 닫혔습니다.");
+    window = 0; //모터 값을 0으로 하여
+    servo.write(window); //창문을 닫음
+    delay(1000);
+  } 
+  if('3' == cData){ //블루투스에 3의 값이 들어오면 자동모드 활성
+    BTSerial.println("자동모드 활성");
+    while(1){
+      int cdsValue = analogRead(cds); //조도센서 값을 읽어와서 cdsValue에 저장
+      //Serial.println(cdsValue);
+      if(cdsValue>800){ //만약 값이 조도센서 값이 800보다 크면
+        window = 0; //모터 값을 90 증가 시켜서
+        servo.write(window); //창문을 열게 함
+        delay(1000);
+      } else if(cdsValue<50){ //만약 값이 조도센서 값이 50보다 작으면
+        window = angle; //모터 값을 0으로 시켜서
+        servo.write(window); //창문을 닫게 함
+        delay(1000);
+      }
+        BTSerial.available();
+        char cData = BTSerial.read();  
+        if('1' == cData){ //3번 동작 중 블루투스 값이 1가 들어오면
+          BTSerial.println("창문이 열렸습니다.");
+          window = angle; //모터 값을 90 증가 시켜서
+          servo.write(window); //창문을 열게 함
+          delay(100);
+          break; //그리고 while 문을 빠져 나감
+        } else if ('2' == cData){ //3번 동작 중 블루투스 값이 2가 들어오면
+          BTSerial.println("창문이 닫혔습니다.");
+          window = 0; //모터 값을 0으로 하여
+          servo.write(window); //창문을 닫음
+          delay(100);
+          break; //그리고 while 문을 빠져 나감
+        }
+    }
+  }
+}
