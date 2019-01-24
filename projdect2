@@ -1,0 +1,151 @@
+#include <Servo.h>
+#include <SoftwareSerial.h>
+#define TRIG 13
+#define ECHO 12
+#define RXD 7
+#define TXD 6
+
+const int buzzerPin = 5;
+int volume = 10;
+int value = 0;
+SoftwareSerial BTSerial(TXD, RXD);
+Servo servo;
+long duration, distance;
+
+void setup() {
+  pinMode(TRIG, OUTPUT); 
+  pinMode(ECHO, INPUT);
+  pinMode(buzzerPin, OUTPUT);
+  servo.attach(9);
+  Serial.begin(9600);
+  BTSerial.begin(9600);
+}
+
+void motor_buzzer() {
+  digitalWrite(TRIG, LOW);
+  delayMicroseconds(10);
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(15);
+  digitalWrite(TRIG, LOW);
+  
+  duration = pulseIn(ECHO, HIGH);
+  distance = duration/29/2;
+  
+  if(value == 0) {
+      value = 170;
+      delay(100);
+      servo.write(value);
+      
+      if(distance < 20) {
+        Serial.println(distance);
+        delay(100);
+        tone(buzzerPin, 80);
+        delay(100);
+      } else if(distance >= 20) {
+          Serial.println(distance);
+          noTone(buzzerPin);
+          delay(100);
+        }
+      } else {
+        value = 0;
+        delay(100);
+        servo.write(value);
+          
+        if(distance < 20) {
+          Serial.println(distance);
+          delay(100);
+          tone(buzzerPin, 80);
+          delay(100);
+        } else if(distance >= 20) {
+          Serial.println(distance);
+          noTone(buzzerPin);
+          delay(100);
+        }
+      }
+}
+
+void buzzer() {
+  tone(buzzerPin, 80);
+  delay(1000);
+  noTone(buzzerPin);
+}
+
+void motor() {
+  noTone(buzzerPin);
+  if(value == 0){
+    value = 170;
+    delay(300);
+    servo.write(value);
+  } else {
+    value = 0;
+    delay(300);
+    servo.write(value);
+  }
+}
+
+void turn_off() {
+  value = 0;
+  servo.write(value);
+  noTone(buzzerPin);
+}
+
+void loop() {
+  BTSerial.available();
+  char cData = BTSerial.read();
+  
+  if('1' == cData) {
+    BTSerial.println("BUZZER");
+    buzzer();
+  }
+  
+  if('2' == cData) {
+    BTSerial.println("AUTOMATIC");
+    while(1){
+      motor_buzzer();
+      BTSerial.available();
+      char cData = BTSerial.read();
+      if('1' == cData) {
+        BTSerial.println("BUZZER");
+        buzzer();
+        break;
+      }
+      if('3' == cData) {
+        BTSerial.println("MOTOR");
+        motor();
+        break;
+      }
+      if('4' == cData) {
+        BTSerial.println("TURN OFF");
+        turn_off();
+        break;
+      }
+    }
+  }
+  if('3' == cData) {
+    BTSerial.println("MOTOR");
+    while(1){
+      motor();
+      BTSerial.available();
+      char cData = BTSerial.read();
+      if('1' == cData) {
+        BTSerial.println("BUZZER");
+        buzzer();
+        break;
+      }
+      if('2' == cData) {
+        BTSerial.println("AUTOMATIC");
+        motor_buzzer();
+        break;
+      }
+      if('4' == cData) {
+        BTSerial.println("TURN OFF");
+        turn_off();
+        break;
+      }
+    }
+  }
+  if('4' == cData) {
+    BTSerial.println("TURN OFF");
+    turn_off();
+  }
+}
